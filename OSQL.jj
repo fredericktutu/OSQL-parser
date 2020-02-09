@@ -1,0 +1,583 @@
+options{
+	STATIC = false;
+	JDK_VERSION = "1.5";	
+}
+
+PARSER_BEGIN(OSQL)
+package loaking.example.databasedemo.parser;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+
+public class OSQL{
+/*
+	public static void main(String[] args){
+        InputStreamReader reader = new InputStreamReader(System.in);
+        OSQL parser = new OSQL(reader);
+        AST root;
+
+        HashMap<String,AttrValue> m1 = new HashMap();
+        m1.put("price", new AttrValue("100","int"));
+        m1.put("name", new AttrValue("xiaoming","string"));
+        while(true){
+            try{
+                System.out.println("input one line:");
+                root = parser.start();
+                System.out.println(root.NodeTag);
+                switch(root.NodeTag){
+                    case "CreateClass":{
+                        CreateClass nroot = (CreateClass) root;break;
+                    }
+                    case "CreateSelectDeputy":{
+                        CreateSelectDeputy nroot = (CreateSelectDeputy)root;break;
+                    }
+                    case "SelectFrom":{
+                        SelectFrom nroot = (SelectFrom)root;
+                        boolean testRes = ((ConditionExprNode)nroot.whereClause).eval(m1);
+                        System.out.println("whereClause is: " + testRes);
+                        if(testRes){
+                            System.out.println("this tuple match the condition!");
+                            for(int i=0;i<nroot.attrs.size();i++){
+                                System.out.println("switch result [" + i + "] is: {" + nroot.attrs.get(i).switchRule.evalCompute(m1) + "}");
+                                System.out.println("switch result [" + i + "] has type {" + nroot.attrs.get(i).switchRule.resType + "}");
+                            }
+                        }else{
+                            System.out.println("this tuple dosen't match the condition!");
+                        }
+                        break;
+                    }
+                    case "DeleteFrom":{
+                        DeleteFrom nroot = (DeleteFrom)root;
+                        System.out.println("whereClause is:" + ((ConditionExprNode)nroot.whereClause).eval(m1));
+                        break;
+                    }
+                    case "UpdateClass":{
+                        UpdateClass nroot = (UpdateClass)root;break;
+                    }
+                    case "InsertClass":{
+                        InsertClass nroot = (InsertClass)root;break;
+                    }
+                    case "DropClass":{
+                        DropClass nroot = (DropClass)root;break;
+                    }
+                }
+                System.out.println("-------------------------\n");
+            }catch(OpException e){
+                System.out.println("运算错误");
+            }catch(TypeException e){
+                System.out.println("类型错误");
+            }catch(ParseException e){
+                System.out.println("语法错误");
+                reader = new InputStreamReader(System.in);
+                parser = new OSQL(reader);
+            }
+        }
+	}
+*/
+}
+
+
+PARSER_END(OSQL)
+SKIP: {
+    <BLANK: " "| "\t" | "\n" | "\r">
+}
+
+
+TOKEN: {
+	<LP: "(">
+	|<RP: ")">
+	|<SEMI: ";">
+	|<COMMA: ",">
+	|<ARROW: "->">
+	|<DOT: ".">
+    |<EQ: "=">
+}
+
+TOKEN:{
+	<COMPARE_OP: [">","<"]
+                |"<>"
+                |"<=" 
+                |">=">
+    |<AND: ("A"|"a")("N"|"n")("D"|"d")>
+    |<OR: ("O"|"o")("R"|"r")>
+    |<NOT: ("N"|"n")("O"|"o")("T"|"t")>
+}
+/*
+TOKEN: {
+
+	<CREATE: "CREATE">
+	|<DROPCLASS: "DROPCLASS">
+	|<CLASS: "CLASS"> 
+	|<INSERT: "INSERT">
+	|<INTO: "INTO">
+	|<DELETE: "DELETE">
+	|<FROM: "FROM">
+	|<UPDATE: "UPDATE">
+	|<SELECT: "SELECT">
+	|<VALUES: "VALUES">
+    |<WHERE: "WHERE">
+    |<AS: "AS">
+    |<SELECTDEPUTY: "SELECTDEPUTY">
+    |<SET: "SET">
+}
+*/
+TOKEN :
+{
+  < CREATE : ("C"|"c")("R"|"r")("E"|"e")("A"|"a")("T"|"t")("E"|"e") >
+| < SELECT : ("S"|"s")("E"|"e")("L"|"l")("E"|"e")("C"|"c")("T"|"t")>
+| < CLASS : ("C"|"c")("L"|"l")("A"|"a")("S"|"s")("S"|"s")>
+| < SELECTDEPUTY :("S"|"s")("E"|"e")("L"|"l")("E"|"e")("C"|"c")("T"|"t")
+  ("D"|"d")("E"|"e")("P"|"p")("U"|"u")("T"|"t")("Y"|"y")>
+| < AS : ("A"|"a")("S"|"s")>
+| < FROM : ("F"|"f")("R"|"r")("O"|"o")("M"|"m")>
+| < WHERE : ("W"|"w")("H"|"h")("E"|"e")("R"|"r")("E"|"e")>
+| < DROP : ("D"|"d")("R"|"r")("O"|"o")("P"|"p")>
+| < INSERT : ("I"|"i")("N"|"n")("S"|"s")("E"|"e")("R"|"r")("T"|"t")>
+| < INTO : ("I"|"i")("N"|"n")("T"|"t")("O"|"o")>
+| < DELETE : ("D"|"d")("E"|"e")("L"|"l")("E"|"e")("T"|"t")("E"|"e")>
+| < UPDATE : ("U"|"u")("P"|"p")("D"|"d")("A"|"a")("T"|"t")("E"|"e")>
+| < VALUES : ("V"|"v")("A"|"a")("L"|"l")("U"|"u")("E"|"e")("S"|"s")>
+| < SET : ("S"|"s")("E"|"e")("T"|"t")>
+}
+//data type
+TOKEN: {
+	<TYPE:  "int" | "char" | "string" | "float" | "bool">
+/*	
+	|<INT_TYPE: "int">
+	|<CHAR_TYPE: "char">
+	|<STRING_TYPE: "string">
+	|<FLOAT_TYPE: "float">
+	|<BOOL_TYPE: "bool">
+*/
+}
+
+//identifier
+TOKEN: {
+	<ID: ["a"-"z", "A"-"Z", "_"] (["a"-"z", "A"-"Z", "_", "0"-"9"])*>
+}
+
+
+//integer
+TOKEN:{
+	<INT_VALUE: "0"
+			| ("-")? ["1" - "9"] (["0" - "9"])*>
+}
+//float
+TOKEN:{
+	<FLOAT_VALUE: ("-")? "0" ("." (["0"-"9"])+)?
+				| ("-")? ["1" - "9"](["0" - "9"])* ("." (["0"-"9"])+)?>
+}
+
+//string
+MORE: { <"\"">: IN_STRING }
+<IN_STRING> MORE: {
+	 <(~["\"", "\\", "\n", "\r"])+>
+	|<"\\" (["0"-"7"]){3}>
+	|<"\\" ~[]> 
+}
+<IN_STRING> TOKEN: {<STRING_VALUE: "\""> : DEFAULT} 
+
+
+
+
+//char
+MORE: { <"'">: IN_CHARACTER}
+<IN_CHARACTER> MORE: {
+	 <(~["\"", "\\", "\n", "\r"])+> : CHARACTER_TERM
+	|<"\\" (["0"-"7"]){3}> 			: CHARACTER_TERM
+	|<"\\" ~[]> 					: CHARACTER_TERM
+}
+<CHARACTER_TERM> TOKEN: {<CHAR_VALUE: "'"> : DEFAULT}
+
+
+AST start():
+{
+    AST ast;
+}
+{
+    (LOOKAHEAD(2)
+    ast=create_class()
+    |ast=create_select_deputy()
+    |ast=select_from()
+    |ast=delete_from()
+    |ast=update_class()
+    |ast=insert_into()
+    |ast=drop_class())
+    {
+        return ast;
+    }
+
+}
+
+String value(): 
+{
+	Token t;
+}
+{
+	(t=<INT_VALUE>|t=<FLOAT_VALUE>)
+	{
+		return t.image;
+	}
+    |(t=<CHAR_VALUE>|t=<STRING_VALUE>)
+    {
+        return t.image.substring(1,t.image.length()-1);
+    }
+}
+
+CreateClass create_class(): 
+{
+	Token className;
+	ArrayList<RealAttr> cols;
+
+}
+{
+	<CREATE> <CLASS> className=<ID> <LP> cols=rel_attr_list() <RP> <SEMI>
+	{
+		return new CreateClass(className.image, cols);
+	}
+}
+
+ArrayList<RealAttr> rel_attr_list(): 
+{
+	Token id;
+	Token type;
+	ArrayList<RealAttr> cols = new ArrayList<RealAttr>();
+}
+{
+	id=<ID> type=<TYPE> {cols.add(new RealAttr(id.image,type.image));} 
+                (<COMMA> id=<ID> type=<TYPE>{if(type.image == "char")type.image="string";cols.add(new RealAttr(id.image,type.image));})*
+	{
+		return cols;
+	}
+}
+
+
+DropClass drop_class():
+{
+	Token className;
+}
+{
+	<DROP> <CLASS> className=<ID> <SEMI>
+	{
+		return new DropClass(className.image);
+	}
+}
+
+
+InsertClass insert_into():
+{
+	Token className;
+	ArrayList<String> attrs;
+	ArrayList<String> values;
+}
+{
+	<INSERT> <INTO> className=<ID> <LP> attrs=attr_list() <RP> <VALUES> <LP> values=value_list() <RP> <SEMI>
+	{
+		return new InsertClass(className.image, attrs, values);
+	}
+}
+
+ArrayList<String> attr_list():   //属性列表
+{
+	Token curAttr; //第一个id
+	ArrayList<String> attrs;
+}
+{
+	curAttr=<ID>{attrs = new ArrayList(); attrs.add(curAttr.image);} (<COMMA> curAttr=<ID>{attrs.add(curAttr.image);})*
+	{
+		return attrs;
+	}
+}
+
+ArrayList<String> value_list():   //值列表
+{
+	String curValue;
+	ArrayList<String> values;
+}
+{
+    curValue=value(){values = new ArrayList();values.add(curValue);} (<COMMA> curValue=value(){values.add(curValue);})*
+	{
+		return values;
+	}
+}
+
+
+UpdateClass update_class():
+{
+	String value;
+	Token className;
+	ArrayList<String> attrs = new ArrayList();
+	ArrayList<String> values = new ArrayList();
+	Token attr;
+	ExprNode whereClause;
+}
+{
+	<UPDATE> className=<ID> <SET> (attr=<ID>{attrs.add(attr.image);} <EQ> value=value(){values.add(value);}) (<COMMA> attr=<ID>{attrs.add(attr.image);} <EQ> value=value(){values.add(value);})* <WHERE> whereClause=condition() <SEMI>
+	{
+
+		return new UpdateClass(className.image, attrs, values, whereClause);
+	}
+}
+
+DeleteFrom delete_from():
+{
+	Token className;
+	ExprNode whereClause;
+}
+{
+	<DELETE> <FROM> className=<ID> <WHERE> whereClause=condition() <SEMI>
+	{
+		return new DeleteFrom(className.image, (ConditionExprNode)whereClause);
+	}
+}
+
+
+SelectFrom select_from():
+{
+	ArrayList<AttrContext> attr_list = new ArrayList();
+	AttrContext attr;
+	Token className;
+	ExprNode whereClause;
+}
+{
+	<SELECT> attr=attribute(){attr_list.add(attr);} (<COMMA> attr=attribute(){attr_list.add(attr);})* <FROM> className=<ID> 
+	(<WHERE> whereClause=condition(){return new SelectFrom(className.image, attr_list, (ConditionExprNode)whereClause);})* <SEMI>
+	{	
+		whereClause = new ConditionExprNode("=",new ValueNode("int","1"),new ValueNode("int", "1"));
+		return new SelectFrom(className.image, attr_list, (ConditionExprNode)whereClause);
+	}
+}
+
+SelectDeputyFrom select_deputy_from():
+{
+	ArrayList<DeputyAttr> attr_list;
+	Token className;
+	ExprNode whereClause;
+}
+{
+	<SELECT> attr_list=switch_list() <FROM> className=<ID> <WHERE> whereClause=condition() <SEMI>
+	{
+		return new SelectDeputyFrom(className.image, attr_list, (ConditionExprNode)whereClause);
+	}
+}
+
+CreateSelectDeputy create_select_deputy(): 
+{
+	ArrayList<RealAttr> realAttrs = new ArrayList<RealAttr>();
+	ArrayList<DeputyAttr> deputyAttrs;
+	Token className;
+	Token originClass;
+	SelectDeputyFrom deputyInfo;
+}
+{
+	<CREATE> <SELECTDEPUTY> className=<ID> (<LP> realAttrs=rel_attr_list() <RP>)? deputyInfo=select_deputy_from()
+	{
+		return new CreateSelectDeputy(className.image, deputyInfo.className, deputyInfo.attrs, realAttrs, deputyInfo.whereClause);
+	}
+}
+
+ArrayList<DeputyAttr> switch_list():
+{
+	ExprNode switchRule; //跨类查询的话，这个switchrule就不考虑计算的了，只是一个attr类型的valueNode里面指向一个attrContext
+	Token name;
+	DeputyAttr attr;
+	ArrayList<DeputyAttr> attr_list = new ArrayList();
+}
+{
+	switchRule=computation(){attr = new DeputyAttr("no name","no class", switchRule); attr_list.add(attr);} (<AS> name=<ID>{attr.name = name.image;})?
+                        (<COMMA> switchRule=computation(){attr = new DeputyAttr("no name","no class", switchRule);attr_list.add(attr);} (<AS> name=<ID>{attr.name = name.image;})?)*
+	{
+		return attr_list;
+	}
+}
+
+ExprNode condition():
+//and or not
+//> < = >= <= <>
+{
+	ExprNode expr;
+}
+{
+	expr=or_condition()
+	{
+		return expr;
+	}
+}
+
+ExprNode or_condition():
+{
+	ExprNode expr1;
+	ExprNode expr2;
+}
+{
+    expr1=and_condition() (
+                            (<OR> expr2=and_condition()){expr1 = new ConditionExprNode("OR",expr1, expr2);}
+                          )*
+    {
+        return expr1;
+    }
+}
+
+ExprNode and_condition():
+{
+	ExprNode expr1;
+	ExprNode expr2;
+}
+{
+    expr1=not_condition() (
+                            (<AND> expr2=not_condition()){expr1 = new ConditionExprNode("AND",expr1, expr2);}
+                                )*
+    {
+        return expr1;
+    }
+}
+
+ExprNode not_condition():
+{
+	ExprNode expr;
+}
+{
+	expr=compare_condition()
+	{
+		return expr;
+	}
+	|<NOT> expr=compare_condition()
+	{
+		return new ConditionExprNode("NOT", expr, null);
+	}
+}
+ExprNode compare_condition():
+{
+	ExprNode expr1;
+	ExprNode expr2;
+	Token cop;
+}
+{
+	<LP> expr1=or_condition() <RP>
+	{
+		return expr1;
+	}
+	|expr1=atom_condition() (cop=<COMPARE_OP>|cop=<EQ>) expr2=atom_condition()
+	{
+		return new ConditionExprNode(cop.image, expr1, expr2);
+	}
+}
+
+ExprNode atom_condition():
+{
+	Token v;
+	AttrContext attr;
+}
+{
+	v=<STRING_VALUE>
+	{
+		return new ValueNode("string",v.image.substring(1,v.image.length()-1));
+	}
+	|v=<CHAR_VALUE>
+	{
+		return new ValueNode("char",v.image.substring(1,2));
+	}
+	|v=<INT_VALUE>
+	{
+		return new ValueNode("int",v.image);
+	}
+	|v=<FLOAT_VALUE>
+	{
+		return new ValueNode("float",v.image);
+	}
+	|attr=attribute()
+	{
+		return new ValueNode("attr", attr);
+	}
+}
+
+
+
+
+
+ExprNode computation():
+//binary:加减乘除
+//先只要考虑数字
+{
+	ExprNode expr;
+}
+{
+	expr=additive_expression()
+	{
+		return expr;
+	}
+}
+
+ExprNode additive_expression():
+{
+	ExprNode expr1;
+	ExprNode expr2;
+}
+{
+    expr1=multitive_expression() (
+                                ("+" expr2=multitive_expression()){expr1 = new ComputeExprNode("+",expr1, expr2);}
+                                |("-" expr2=multitive_expression()){expr1 = new ComputeExprNode("-",expr1, expr2);}  
+                                )*
+    {
+        return expr1;
+    }
+}
+
+ExprNode multitive_expression():
+{
+	ExprNode expr1;
+	ExprNode expr2;
+}
+{
+    expr1=primary_number() (
+                            ("*" expr2=primary_number()){expr1 = new ComputeExprNode("*",expr1, expr2);}
+                            |("/" expr2=primary_number()){expr1 = new ComputeExprNode("/",expr1, expr2);}  
+                            )*
+    {
+        return expr1;
+    }
+}
+
+ExprNode primary_number():
+{
+	ExprNode expr;
+	Token v;
+	AttrContext attr;
+}
+{
+	v=<INT_VALUE>
+	{
+		return new ValueNode("int", v.image);
+	}
+	|v=<FLOAT_VALUE>
+	{
+		return new ValueNode("float", v.image);
+	}
+	|attr=attribute()
+	{
+		return new ValueNode("attr", attr);
+	}
+	|<LP> expr=computation() <RP>
+	{
+		return expr;
+	}
+}
+
+
+AttrContext attribute():
+{
+	Token cross;
+	AttrContext attr = new AttrContext();
+	Token name;
+}
+{	
+    LOOKAHEAD(2)
+	(cross=<ID> {attr.className = cross.image;attr.crossClass.add(cross.image);}
+	(<ARROW> cross=<ID>{attr.crossClass.add(cross.image);})*{attr.type = "indirect";} 
+																				<DOT>) 
+																					name=<ID>{attr.attrName = name.image; return attr;}
+    |name=<ID>{attr.attrName = name.image; return attr;}
+}
+
+
